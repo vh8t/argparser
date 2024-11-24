@@ -24,6 +24,7 @@ type StringFlag struct {
 	long        string
 	short       string
 	description string
+	required    bool
 	empty       bool
 	value       string
 }
@@ -32,6 +33,7 @@ type IntFlag struct {
 	long        string
 	short       string
 	description string
+	required    bool
 	empty       bool
 	value       int
 }
@@ -40,6 +42,7 @@ type FloatFlag struct {
 	long        string
 	short       string
 	description string
+	required    bool
 	empty       bool
 	value       float64
 }

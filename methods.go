@@ -2,13 +2,23 @@ package argparser
 
 import "fmt"
 
-func (r *Rule) AddStringFlag(long, short, description string) *Rule {
+func (r *Rule) AddStringFlag(long, short, description string, required bool, defaultValue ...string) *Rule {
+	var defaultVal string
+	if len(defaultValue) > 0 && !required {
+		defaultVal = defaultValue[0]
+	}
+
+	if required {
+		description = "(required)  " + description
+	}
+
 	r.stringFlags = append(r.stringFlags, StringFlag{
 		long:        long,
 		short:       short,
 		description: description,
+		required:    required,
 		empty:       true,
-		value:       "",
+		value:       defaultVal,
 	})
 
 	return r
@@ -24,13 +34,23 @@ func (r *Rule) GetStringFlag(name string) (string, bool) {
 	return "", false
 }
 
-func (r *Rule) AddIntFlag(long, short, description string) *Rule {
+func (r *Rule) AddIntFlag(long, short, description string, required bool, defaultValue ...int) *Rule {
+	var defaultVal int
+	if len(defaultValue) > 0 && !required {
+		defaultVal = defaultValue[0]
+	}
+
+	if required {
+		description = "(required)  " + description
+	}
+
 	r.intFlags = append(r.intFlags, IntFlag{
 		long:        long,
 		short:       short,
 		description: description,
+		required:    required,
 		empty:       true,
-		value:       0,
+		value:       defaultVal,
 	})
 
 	return r
@@ -46,13 +66,23 @@ func (r *Rule) GetIntFlag(name string) (int, bool) {
 	return 0, false
 }
 
-func (r *Rule) AddFloatFlag(long, short, description string) *Rule {
+func (r *Rule) AddFloatFlag(long, short, description string, required bool, defaultValue ...float64) *Rule {
+	var defaultVal float64
+	if len(defaultValue) > 0 && !required {
+		defaultVal = defaultValue[0]
+	}
+
+	if required {
+		description = "(required)  " + description
+	}
+
 	r.floatFlags = append(r.floatFlags, FloatFlag{
 		long:        long,
 		short:       short,
 		description: description,
+		required:    required,
 		empty:       true,
-		value:       0.0,
+		value:       defaultVal,
 	})
 
 	return r
@@ -111,7 +141,7 @@ func (r *Rule) GetPositional(name string) string {
 }
 
 func (r *Rule) Help() string {
-	out := fmt.Sprintf("%s %s\n\nUSAGE:\n  %s", r.program, r.version, r.program)
+	out := fmt.Sprintf("%s %s\n%s\n\nUSAGE:\n  %s", r.program, r.version, r.description, r.program)
 
 	var maxLBool, maxSBool int
 	var maxLArg, maxSArg int
@@ -158,6 +188,8 @@ func (r *Rule) Help() string {
 		out += fmt.Sprintf(" <%s>", pos.name)
 	}
 
+	var help string
+
 	if len(r.boolFlags) > 0 {
 		out += "\n\nFLAGS:"
 		for _, flag := range r.boolFlags {
@@ -169,9 +201,15 @@ func (r *Rule) Help() string {
 				long = fmt.Sprintf("--%s", flag.long)
 			}
 
-			out += fmt.Sprintf("\n  %-*s %-*s   %s", maxSBool, short, maxLBool, long, flag.description)
+			if long == "--help" {
+				help = fmt.Sprintf("\n  %-*s %-*s   %s", maxSBool, short, maxLBool, long, flag.description)
+			} else {
+				out += fmt.Sprintf("\n  %-*s %-*s   %s", maxSBool, short, maxLBool, long, flag.description)
+			}
 		}
 	}
+
+	out += help
 
 	if len(r.stringFlags) > 0 || len(r.intFlags) > 0 {
 		out += "\n\nOPTIONS:"

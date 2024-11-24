@@ -50,15 +50,6 @@ func clean[T any](list []T, indexes []int) []T {
 }
 
 func (r *Rule) Parse(args []string) error {
-	if r.helpCommand {
-		for _, arg := range args {
-			if arg == "--help" {
-				fmt.Println(r.Help())
-				return nil
-			}
-		}
-	}
-
 	var remove []int
 
 	for i, flag := range r.boolFlags {
@@ -79,20 +70,45 @@ func (r *Rule) Parse(args []string) error {
 	remove = []int{}
 
 	for i, flag := range r.stringFlags {
+		var found bool
+
 		for j, arg := range args {
+			var value string
+
+			if strings.Contains(arg, "=") {
+				values := strings.SplitN(arg, "=", 2)
+				if len(values) != 2 {
+					return fmt.Errorf("%s flag is missing argument", arg)
+				}
+				arg = values[0]
+				value = values[1]
+			}
+
 			if (strings.HasPrefix(arg, "--") && strings.TrimPrefix(arg, "--") == flag.long) || (strings.HasPrefix(arg, "-") && strings.TrimPrefix(arg, "-") == flag.short) {
 				if !r.stringFlags[i].empty {
 					return fmt.Errorf("%s is duplicate flag", arg)
 				}
 
-				if j+1 >= len(args) {
-					return fmt.Errorf("%s flag is missing argument", arg)
+				if value == "" {
+					if j+1 >= len(args) {
+						return fmt.Errorf("%s flag is missing argument", arg)
+					}
+
+					r.stringFlags[i].empty = false
+					r.stringFlags[i].value = args[j+1]
+					remove = append(remove, j, j+1)
+				} else {
+					r.stringFlags[i].empty = false
+					r.stringFlags[i].value = value
+					remove = append(remove, j)
 				}
 
-				r.stringFlags[i].empty = false
-				r.stringFlags[i].value = args[j+1]
-				remove = append(remove, j, j+1)
+				found = true
 			}
+		}
+
+		if !found && flag.required {
+			return fmt.Errorf("%s flag is required", flag.long)
 		}
 	}
 
@@ -100,25 +116,55 @@ func (r *Rule) Parse(args []string) error {
 	remove = []int{}
 
 	for i, flag := range r.intFlags {
+		var found bool
+
 		for j, arg := range args {
+			var value string
+
+			if strings.Contains(arg, "=") {
+				values := strings.SplitN(arg, "=", 2)
+				if len(values) != 2 {
+					return fmt.Errorf("%s flag is missing argument", arg)
+				}
+				arg = values[0]
+				value = values[1]
+			}
+
 			if (strings.HasPrefix(arg, "--") && strings.TrimPrefix(arg, "--") == flag.long) || (strings.HasPrefix(arg, "-") && strings.TrimPrefix(arg, "-") == flag.short) {
 				if !r.intFlags[i].empty {
 					return fmt.Errorf("%s is duplicate flag", arg)
 				}
 
-				if j+1 >= len(args) {
-					return fmt.Errorf("%s flag is missing argument", arg)
+				if value == "" {
+					if j+1 >= len(args) {
+						return fmt.Errorf("%s flag is missing argument", arg)
+					}
+
+					val, err := strconv.ParseInt(args[j+1], 0, 64)
+					if err != nil {
+						return err
+					}
+
+					r.intFlags[i].empty = false
+					r.intFlags[i].value = int(val)
+					remove = append(remove, j, j+1)
+				} else {
+					val, err := strconv.ParseInt(value, 0, 64)
+					if err != nil {
+						return err
+					}
+
+					r.intFlags[i].empty = false
+					r.intFlags[i].value = int(val)
+					remove = append(remove, j)
 				}
 
-				value, err := strconv.ParseInt(args[j+1], 0, 64)
-				if err != nil {
-					return err
-				}
-
-				r.intFlags[i].empty = false
-				r.intFlags[i].value = int(value)
-				remove = append(remove, j, j+1)
+				found = true
 			}
+		}
+
+		if !found && flag.required {
+			return fmt.Errorf("%s flag is required", flag.long)
 		}
 	}
 
@@ -126,25 +172,55 @@ func (r *Rule) Parse(args []string) error {
 	remove = []int{}
 
 	for i, flag := range r.floatFlags {
+		var found bool
+
 		for j, arg := range args {
+			var value string
+
+			if strings.Contains(arg, "=") {
+				values := strings.SplitN(arg, "=", 2)
+				if len(values) != 2 {
+					return fmt.Errorf("%s flag is missing argument", arg)
+				}
+				arg = values[0]
+				value = values[1]
+			}
+
 			if (strings.HasPrefix(arg, "--") && strings.TrimPrefix(arg, "--") == flag.long) || (strings.HasPrefix(arg, "-") && strings.TrimPrefix(arg, "-") == flag.short) {
 				if !r.intFlags[i].empty {
 					return fmt.Errorf("%s is duplicate flag", arg)
 				}
 
-				if j+1 >= len(args) {
-					return fmt.Errorf("%s flag is missing argument", arg)
+				if value == "" {
+					if j+1 >= len(args) {
+						return fmt.Errorf("%s flag is missing argument", arg)
+					}
+
+					val, err := strconv.ParseFloat(args[j+1], 64)
+					if err != nil {
+						return err
+					}
+
+					r.floatFlags[i].empty = false
+					r.floatFlags[i].value = val
+					remove = append(remove, j, j+1)
+				} else {
+					val, err := strconv.ParseFloat(value, 64)
+					if err != nil {
+						return err
+					}
+
+					r.floatFlags[i].empty = false
+					r.floatFlags[i].value = val
+					remove = append(remove, j)
 				}
 
-				value, err := strconv.ParseFloat(args[j+1], 64)
-				if err != nil {
-					return err
-				}
-
-				r.floatFlags[i].empty = false
-				r.floatFlags[i].value = value
-				remove = append(remove, j, j+1)
+				found = true
 			}
+		}
+
+		if !found && flag.required {
+			return fmt.Errorf("%s flag is required", flag.long)
 		}
 	}
 
